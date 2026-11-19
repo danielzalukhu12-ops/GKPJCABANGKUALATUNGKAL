@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Manajemen Jemaat & Absensi Gereja</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Code Generator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- HTML5 QR Code Scanner (Kamera) -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Export Excel (SheetJS) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Export PDF (jsPDF & AutoTable) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        .hidden-section { display: none !important; }
+        @media print {
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800">
+
+    <!-- ==================== 1. HALAMAN LOGIN ==================== -->
+    <div id="login-page" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-slate-900 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+            <div class="text-center mb-6">
+                <!-- SLOT LOGO GEREJA -->
+                <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center overflow-hidden">
+                    <img id="login-logo" src="https://via.placeholder.com/150?text=LOGO+GEREJA" alt="Logo Gereja" class="w-full h-full object-contain">
+                </div>
+                <h1 id="login-church-name" class="text-2xl font-bold text-slate-800">SISTEM DATA GEREJA</h1>
+                <p class="text-sm text-slate-500 mt-1">Silakan masuk untuk mengelola data jemaat & absensi</p>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fas fa-user"></i></span>
+                        <input type="text" id="username" required placeholder="Masukkan username (admin)" class="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fas fa-lock"></i></span>
+                        <input type="password" id="password" required placeholder="Masukkan password (admin123)" class="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
+                    </div>
+                </div>
+                <p id="login-error" class="text-red-500 text-xs hidden">Username atau password salah!</p>
+                <button type="submit" id="btn-login" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg transition shadow-md">
+                    Masuk ke Dashboard
+                </button>
+            </form>
+            <div class="mt-4 text-center text-xs text-slate-400">
+                Default Login: <b>admin</b> / <b>admin123</b>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== DASHBOARD UTAMA ==================== -->
+    <div id="main-app" class="hidden-section min-h-screen flex flex-col md:flex-row">
+        
+        <!-- Sidebar Navigasi -->
+        <aside class="w-full md:w-64 bg-blue-950 text-white flex flex-col justify-between no-print">
+            <div>
+                <div class="p-5 flex items-center space-x-3 border-b border-blue-900">
+                    <img id="sidebar-logo" src="https://via.placeholder.com/150?text=LOGO" alt="Logo" class="w-10 h-10 rounded-full bg-white object-contain p-0.5">
+                    <div>
+                        <h2 id="sidebar-church-name" class="font-bold text-sm leading-tight">GEREJA KITA</h2>
+                        <span id="sidebar-sync-badge" class="text-[11px] text-emerald-300 flex items-center gap-1 mt-0.5">
+                            <i class="fas fa-cloud"></i> Terhubung Cloud
+                        </span>
+                    </div>
+                </div>
+                <nav class="p-4 space-y-2">
+                    <button onclick="showTab('tab-jemaat')" id="nav-jemaat" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-blue-800 text-white text-left transition">
+                        <i class="fas fa-users w-5"></i>
+                        <span>Data & Tambah Jemaat</span>
+                    </button>
+                    <button onclick="showTab('tab-scan')" id="nav-scan" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-900 text-blue-200 text-left transition">
+                        <i class="fas fa-qrcode w-5"></i>
+                        <span>Scan Absensi Ibadah</span>
+                    </button>
+                    <button onclick="showTab('tab-rekap')" id="nav-rekap" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-900 text-blue-200 text-left transition">
+                        <i class="fas fa-file-export w-5"></i>
+                        <span>Rekap & Unduh Laporan</span>
+                    </button>
+                    <button onclick="showTab('tab-pengaturan')" id="nav-pengaturan" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-900 text-blue-200 text-left transition">
+                        <i class="fas fa-cog w-5"></i>
+                        <span>Pengaturan Aplikasi</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- 7. Fitur Keluar dari Aplikasi -->
+            <div class="p-4 border-t border-blue-900">
+                <button onclick="logout()" class="w-full flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg transition font-medium">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Keluar Aplikasi</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Konten Utama -->
+        <main class="flex-1 p-6 overflow-y-auto">
+            
+            <!-- ==================== 2 & 3. DATA & TAMBAH ANGGOTA JEMAAT ==================== -->
+            <section id="tab-jemaat" class="tab-content space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-800">Manajemen Anggota Jemaat</h1>
+                        <p class="text-sm text-slate-500">Tambah, edit data jemaat, dan cetak kartu QR Barcode absensi (Otomatis Backup ke Google Sheets).</p>
+                    </div>
+                    <button onclick="syncFromGoogleSheets(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2 self-start">
+                        <i class="fas fa-sync-alt"></i> Sinkronkan Data Cloud
+                    </button>
+                </div>
+
+                <!-- Form Tambah / Edit Jemaat -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 id="form-title" class="text-lg font-semibold text-blue-900 mb-4 border-b pb-2">
+                        <i class="fas fa-user-plus mr-2"></i>Tambah Anggota Jemaat Baru
+                    </h2>
+                    <form id="jemaat-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <input type="hidden" id="edit-index" value="-1">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nomor Anggota *</label>
+                            <input type="text" id="no_anggota" required placeholder="Contoh: JMT-001" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Lengkap *</label>
+                            <input type="text" id="nama" required placeholder="Nama sesuai KTP/Baptis" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tempat / Tanggal Lahir *</label>
+                            <input type="text" id="ttl" required placeholder="Contoh: Jakarta, 12 Mei 1990" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nomor HP / WhatsApp *</label>
+                            <input type="tel" id="no_hp" required placeholder="Contoh: 081234567890" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Keterangan (Status/Wilayah/Komisi)</label>
+                            <input type="text" id="keterangan" placeholder="Contoh: Jemaat Tetap / Pemuda" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Alamat Lengkap *</label>
+                            <input type="text" id="alamat" required placeholder="Alamat domisili saat ini" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div class="md:col-span-2 lg:col-span-3 flex justify-end gap-2 mt-2">
+                            <button type="button" id="btn-cancel-edit" onclick="resetForm()" class="hidden px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-medium">
+                                Batal Edit
+                            </button>
+                            <button type="submit" id="btn-save-jemaat" class="px-6 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium shadow">
+                                <i class="fas fa-save mr-1"></i> Simpan Data Jemaat
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabel Daftar Jemaat -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
+                        <h3 class="font-semibold text-slate-800">Daftar Anggota Jemaat (<span id="total-jemaat">0</span>)</h3>
+                        <input type="text" id="search-jemaat" onkeyup="renderJemaatTable()" placeholder="Cari nama atau nomor anggota..." class="px-3 py-1.5 border rounded-lg text-sm w-full sm:w-64">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 text-xs uppercase border-b">
+                                    <th class="p-3">No. Anggota</th>
+                                    <th class="p-3">Nama</th>
+                                    <th class="p-3">Tempat/Tgl Lahir</th>
+                                    <th class="p-3">No. HP</th>
+                                    <th class="p-3">Alamat</th>
+                                    <th class="p-3">Keterangan</th>
+                                    <th class="p-3 text-center">QR Code</th>
+                                    <th class="p-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jemaat-tbody" class="text-sm divide-y divide-slate-200">
+                                <!-- Data dirender via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== 4. SCAN BARCODE ABSENSI IBADAH ==================== -->
+            <section id="tab-scan" class="tab-content hidden-section space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800">Scan Barcode Absensi Ibadah</h1>
+                    <p class="text-sm text-slate-500">Arahkan QR Barcode anggota jemaat ke kamera untuk mencatat kehadiran.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Area Kamera Scanner -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Pilih Jenis Ibadah Hari Ini:</label>
+                            <select id="jenis-ibadah" class="w-full px-3 py-2 border rounded-lg bg-slate-50 font-medium">
+                                <option value="Ibadah Raya Minggu Pagi">Ibadah Raya Minggu Pagi</option>
+                                <option value="Ibadah Raya Minggu Sore">Ibadah Raya Minggu Sore</option>
+                                <option value="Ibadah Pemuda & Remaja">Ibadah Pemuda & Remaja</option>
+                                <option value="Ibadah Doa & Tengah Minggu">Ibadah Doa & Tengah Minggu</option>
+                                <option value="Ibadah Khusus / Hari Raya">Ibadah Khusus / Hari Raya</option>
+                            </select>
+                        </div>
+
+                        <div id="reader" class="w-full rounded-lg overflow-hidden border-2 border-dashed border-blue-300 bg-slate-50 min-h-[280px]"></div>
+                        
+                        <div class="flex gap-2 mt-4">
+                            <button onclick="startScanner()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium">
+                                <i class="fas fa-camera mr-1"></i> Nyalakan Kamera
+                            </button>
+                            <button onclick="stopScanner()" class="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-2 rounded-lg font-medium">
+                                <i class="fas fa-stop mr-1"></i> Matikan Kamera
+                            </button>
+                        </div>
+
+                        <!-- Input Manual jika kamera bermasalah -->
+                        <div class="mt-4 pt-4 border-t">
+                            <label class="block text-xs text-slate-500 mb-1">Atau ketik Nomor Anggota manual lalu klik Hadir:</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="manual-no-anggota" placeholder="Contoh: JMT-001" class="flex-1 px-3 py-1.5 border rounded-lg text-sm">
+                                <button onclick="manualCheckIn()" class="bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm">Hadir</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Log Kehadiran Real-Time -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+                        <h3 class="font-semibold text-slate-800 mb-3 border-b pb-2">
+                            <i class="fas fa-check-circle text-green-600 mr-1"></i> Kehadiran Tercatat Terbaru
+                        </h3>
+                        <div id="scan-alert" class="hidden p-3 mb-3 rounded-lg text-sm font-medium"></div>
+                        <div class="flex-1 overflow-y-auto max-h-[380px]">
+                            <ul id="recent-absensi-list" class="divide-y divide-slate-100 text-sm">
+                                <!-- List log absensi -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== 5. REKAP DATA & UNDUH (EXCEL, PDF, WORD) ==================== -->
+            <section id="tab-rekap" class="tab-content hidden-section space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800">Rekapitulasi Data & Laporan</h1>
+                    <p class="text-sm text-slate-500">Unduh laporan data jemaat dan rekap absensi ibadah ke format Excel, PDF, atau Word.</p>
+                </div>
+
+                <!-- Card Rekap Data Anggota Jemaat -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800">1. Laporan Data Seluruh Anggota Jemaat</h2>
+                            <p class="text-xs text-slate-500">Mencakup seluruh identitas anggota jemaat yang terdaftar.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="exportData('jemaat', 'excel')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                <i class="fas fa-file-excel mr-1"></i> Unduh Excel
+                            </button>
+                            <button onclick="exportData('jemaat', 'pdf')" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                <i class="fas fa-file-pdf mr-1"></i> Unduh PDF
+                            </button>
+                            <button onclick="exportData('jemaat', 'word')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                <i class="fas fa-file-word mr-1"></i> Unduh Word
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Rekap Absensi Ibadah -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800">2. Laporan Rekap Absensi Ibadah</h2>
+                            <p class="text-xs text-slate-500">Filter berdasarkan jenis ibadah atau tanggal sebelum mengunduh.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="exportData('absensi', 'excel')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                <i class="fas fa-file-excel mr-1"></i> Unduh Excel
+                            </button>
+                            <button onclick="exportData('absensi', 'pdf')" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                <i class="fas fa-file-pdf mr-1"></i> Unduh PDF
+                            </button>
+                            <button onclick="exportData('absensi', 'word')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                <i class="fas fa-file-word mr-1"></i> Unduh Word
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter Rekap Absensi -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 bg-slate-50 p-3 rounded-lg">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Filter Jenis Ibadah</label>
+                            <select id="filter-ibadah" onchange="renderRekapTable()" class="w-full px-3 py-1.5 border rounded-lg text-sm bg-white">
+                                <option value="ALL">Semua Ibadah</option>
+                                <option value="Ibadah Raya Minggu Pagi">Ibadah Raya Minggu Pagi</option>
+                                <option value="Ibadah Raya Minggu Sore">Ibadah Raya Minggu Sore</option>
+                                <option value="Ibadah Pemuda & Remaja">Ibadah Pemuda & Remaja</option>
+                                <option value="Ibadah Doa & Tengah Minggu">Ibadah Doa & Tengah Minggu</option>
+                                <option value="Ibadah Khusus / Hari Raya">Ibadah Khusus / Hari Raya</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Filter Tanggal</label>
+                            <input type="date" id="filter-tanggal" onchange="renderRekapTable()" class="w-full px-3 py-1.5 border rounded-lg text-sm bg-white">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="resetFilterAbsensi()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm">Reset Filter</button>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Preview Rekap Absensi -->
+                    <div class="overflow-x-auto">
+                        <table id="table-rekap-absensi" class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 text-xs uppercase border-b">
+                                    <th class="p-3">Tanggal</th>
+                                    <th class="p-3">Jam Hadir</th>
+                                    <th class="p-3">Jenis Ibadah</th>
+                                    <th class="p-3">No. Anggota</th>
+                                    <th class="p-3">Nama Jemaat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rekap-tbody" class="text-sm divide-y divide-slate-200">
+                                <!-- Data dirender via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== 6. PENGATURAN APLIKASI ==================== -->
+            <section id="tab-pengaturan" class="tab-content hidden-section space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800">Pengaturan Aplikasi</h1>
+                    <p class="text-sm text-slate-500">Sesuaikan identitas gereja, logo, keamanan akun, dan sinkronisasi Google Sheets.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Identitas & Logo Gereja -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                        <h3 class="font-bold text-slate-800 border-b pb-2"><i class="fas fa-church mr-2 text-blue-700"></i>Identitas & Logo Gereja</h3>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Gereja</label>
+                            <input type="text" id="set-church-name" class="w-full px-3 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Upload Logo Gereja (PNG/JPG)</label>
+                            <input type="file" id="set-logo-file" accept="image/*" onchange="previewLogoUpload(event)" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            <p class="text-xs text-slate-400 mt-1">Logo akan otomatis tampil di halaman Login & Sidebar.</p>
+                        </div>
+                        <button onclick="saveChurchSettings()" class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                            Simpan Identitas Gereja
+                        </button>
+                    </div>
+
+                    <!-- Keamanan Akun Login -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                        <h3 class="font-bold text-slate-800 border-b pb-2"><i class="fas fa-user-shield mr-2 text-blue-700"></i>Akun Administrator</h3>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Username Baru</label>
+                            <input type="text" id="set-username" class="w-full px-3 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Password Baru</label>
+                            <input type="password" id="set-password" placeholder="Masukkan password baru" class="w-full px-3 py-2 border rounded-lg">
+                        </div>
+                        <button onclick="saveAccountSettings()" class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                            Perbarui Akun Login
+                        </button>
+                    </div>
+
+                    <!-- Sinkronisasi Google Sheets -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4 md:col-span-2">
+                        <div class="flex flex-wrap justify-between items-center border-b pb-2 gap-2">
+                            <h3 class="font-bold text-slate-800"><i class="fas fa-cloud-upload-alt mr-2 text-emerald-600"></i>Sinkronisasi Database Google Sheets</h3>
+                            <span id="sync-status" class="text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-medium">API Terpasang</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">URL Web App Google Apps Script (/exec)</label>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input type="url" id="set-gsheet-url" class="flex-1 px-3 py-2 border rounded-lg text-sm bg-slate-50">
+                                <button onclick="saveGSheetUrl()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                    Simpan & Backup Sekarang
+                                </button>
+                                <button onclick="syncFromGoogleSheets(true)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                    Tarik Data dari Sheet
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Backup & Restore Database Lokal -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4 md:col-span-2">
+                        <h3 class="font-bold text-slate-800 border-b pb-2"><i class="fas fa-database mr-2 text-blue-700"></i>Cadangkan & Pulihkan Data File (JSON)</h3>
+                        <p class="text-xs text-slate-600">Simpan salinan cadangan data ke perangkat Anda dalam format file .json.</p>
+                        <div class="flex flex-wrap gap-3">
+                            <button onclick="backupDatabase()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm">
+                                <i class="fas fa-download mr-1"></i> Unduh File Backup (.json)
+                            </button>
+                            <label class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm cursor-pointer">
+                                <i class="fas fa-upload mr-1"></i> Pulihkan Data (.json)
+                                <input type="file" accept=".json" onchange="restoreDatabase(event)" class="hidden">
+                            </label>
+                            <button onclick="resetAllData()" class="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-sm ml-auto">
+                                <i class="fas fa-trash-alt mr-1"></i> Hapus Semua Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ==================== MODAL QR CODE KARTU JEMAAT ==================== -->
+    <div id="qr-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl">
+            <h3 id="modal-church-title" class="text-xs font-bold text-blue-800 uppercase tracking-wider">KARTU ABSENSI JEMAAT</h3>
+            <h2 id="modal-jemaat-name" class="text-xl font-bold text-slate-800 mt-1">Nama Jemaat</h2>
+            <p id="modal-jemaat-no" class="text-sm text-slate-500 mb-4">JMT-001</p>
+            
+            <div id="qrcode-container" class="flex justify-center my-4 p-4 bg-white border-2 border-slate-200 rounded-xl inline-block"></div>
+            
+            <p class="text-xs text-slate-400 mb-4">Tunjukkan QR Barcode ini pada kamera absensi saat menghadiri ibadah.</p>
+            <div class="flex gap-2">
+                <button onclick="downloadQRImage()" class="flex-1 bg-blue-700 hover:bg-blue-800 text-white py-2 rounded-lg text-sm font-medium">
+                    <i class="fas fa-download mr-1"></i> Simpan QR
+                </button>
+                <button onclick="closeQRModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 py-2 rounded-lg text-sm font-medium">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        // --- KONFIGURASI LINK API GOOGLE SHEETS ANDA ---
+        const DEFAULT_GSHEET_URL = 'https://script.google.com/macros/s/AKfycbw9jdmoprpQIxzcBHL_CSB00RKrds2cW47QK2ysUoyVXl27-t_5LFJZVDXFa3CMW_FgJg/exec';
+        let gsheetUrl = localStorage.getItem('church_gsheet_url') || DEFAULT_GSHEET_URL;
+
+        // --- INISIALISASI STATE & LOCALSTORAGE ---
+        let jemaatList = JSON.parse(localStorage.getItem('church_jemaat')) || [];
+        let absensiList = JSON.parse(localStorage.getItem('church_absensi')) || [];
+        let appSettings = JSON.parse(localStorage.getItem('church_settings')) || {
+            churchName: 'GEREJA KRISTEN INDONESIA',
+            logoUrl: 'https://via.placeholder.com/150?text=LOGO+GEREJA',
+            username: 'admin',
+            password: 'admin123'
+        };
+
+        let html5QrCode = null;
+        let currentQRName = '';
+
+        // --- FUNGSI SINKRONISASI GOOGLE SHEETS ---
+        function updateSyncBadge(text, colorClass, sidebarText) {
+            const badge = document.getElementById('sync-status');
+            if (badge) {
+                badge.className = `text-xs px-3 py-1 rounded-full font-medium ${colorClass}`;
+                badge.innerText = text;
+            }
+            const sidebarBadge = document.getElementById('sidebar-sync-badge');
+            if (sidebarBadge && sidebarText) {
+                sidebarBadge.innerHTML = sidebarText;
+            }
+        }
+
+        function saveGSheetUrl() {
+            const url = document.getElementById('set-gsheet-url').value.trim();
+            localStorage.setItem('church_gsheet_url', url);
+            gsheetUrl = url || DEFAULT_GSHEET_URL;
+            syncToGoogleSheets(true);
+        }
+
+        // 1. KIRIM / BACKUP DATA KE GOOGLE SHEETS
+        async function syncToGoogleSheets(showAlert = false) {
+            if (!gsheetUrl) return;
+            updateSyncBadge('Menyimpan ke Google Sheets...', 'bg-amber-100 text-amber-800', '<i class="fas fa-sync fa-spin"></i> Menyimpan...');
+
+            const payload = {
+                jemaat: jemaatList,
+                absensi: absensiList,
+                settings: {
+                    churchName: appSettings.churchName,
+                    username: appSettings.username,
+                    password: appSettings.password
+                }
+            };
+
+            try {
+                await fetch(gsheetUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                updateSyncBadge('Tersinkronisasi (Google Sheets)', 'bg-emerald-100 text-emerald-800', '<i class="fas fa-cloud"></i> Tersimpan di Cloud');
+                if (showAlert) alert('Data berhasil di-backup ke Google Sheets!');
+            } catch (error) {
+                console.error('Gagal sync ke Google Sheets:', error);
+                updateSyncBadge('Gagal Sinkronisasi', 'bg-red-100 text-red-800', '<i class="fas fa-exclamation-circle"></i> Gagal Sync');
+                if (showAlert) alert('Gagal terhubung ke Google Sheets. Periksa koneksi internet Anda.');
+            }
+        }
+
+        // 2. TARIK DATA DARI GOOGLE SHEETS SAAT LOGIN / REFRESH
+        async function syncFromGoogleSheets(showAlert = false) {
+            if (!gsheetUrl) return;
+            updateSyncBadge('Memuat data dari Google Sheets...', 'bg-blue-100 text-blue-800', '<i class="fas fa-sync fa-spin"></i> Memuat Cloud...');
+
+            try {
+                const response = await fetch(gsheetUrl);
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    jemaatList = result.jemaat || [];
+                    absensiList = result.absensi || [];
+                    
+                    if (result.settings && result.settings.churchName) {
+                        appSettings.churchName = result.settings.churchName;
+                        appSettings.username = result.settings.username || appSettings.username;
+                        appSettings.password = result.settings.password || appSettings.password;
+                        localStorage.setItem('church_settings', JSON.stringify(appSettings));
+                        applySettings();
+                    }
+
+                    localStorage.setItem('church_jemaat', JSON.stringify(jemaatList));
+                    localStorage.setItem('church_absensi', JSON.stringify(absensiList));
+
+                    renderJemaatTable();
+                    renderRekapTable();
+                    renderRecentAbsensi();
+                    updateSyncBadge('Tersinkronisasi (Google Sheets)', 'bg-emerald-100 text-emerald-800', '<i class="fas fa-cloud"></i> Tersinkronisasi');
+                    if (showAlert) alert('Data terbaru berhasil dimuat dari Google Sheets!');
+                }
+            } catch (error) {
+                console.error('Gagal mengambil data dari Google Sheets:', error);
+                updateSyncBadge('Mode Offline (Data Lokal)', 'bg-amber-100 text-amber-800', '<i class="fas fa-wifi"></i> Mode Lokal');
+                if (showAlert) alert('Gagal menarik data dari Google Sheets. Menampilkan data lokal.');
+            }
+        }
+
+        // --- LOAD PENGATURAN SAAT HALAMAN DIBUKA ---
+        function applySettings() {
+            document.getElementById('login-church-name').innerText = appSettings.churchName;
+            document.getElementById('sidebar-church-name').innerText = appSettings.churchName;
+            document.getElementById('modal-church-title').innerText = appSettings.churchName;
+            
+            document.getElementById('login-logo').src = appSettings.logoUrl;
+            document.getElementById('sidebar-logo').src = appSettings.logoUrl;
+
+            document.getElementById('set-church-name').value = appSettings.churchName;
+            document.getElementById('set-username').value = appSettings.username;
+            document.getElementById('set-gsheet-url').value = gsheetUrl;
+        }
+
+        // --- 1. SISTEM LOGIN & LOGOUT ---
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            const btnLogin = document.getElementById('btn-login');
+
+            if (user === appSettings.username && pass === appSettings.password) {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                document.getElementById('login-error').classList.add('hidden');
+                btnLogin.innerText = 'Memuat data dari Google Sheets...';
+                btnLogin.disabled = true;
+
+                await checkAuth();
+
+                btnLogin.innerText = 'Masuk ke Dashboard';
+                btnLogin.disabled = false;
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        });
+
+        async function checkAuth() {
+            const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
+            if (isLoggedIn) {
+                document.getElementById('login-page').classList.add('hidden-section');
+                document.getElementById('main-app').classList.remove('hidden-section');
+                renderJemaatTable();
+                renderRekapTable();
+                renderRecentAbsensi();
+                // Otomatis sinkronisasi data dari Google Sheets saat login / masuk dashboard
+                await syncFromGoogleSheets(false);
+            } else {
+                document.getElementById('login-page').classList.remove('hidden-section');
+                document.getElementById('main-app').classList.add('hidden-section');
+            }
+        }
+
+        function logout() {
+            if (confirm('Apakah Anda yakin ingin keluar dari aplikasi?')) {
+                stopScanner();
+                sessionStorage.removeItem('isLoggedIn');
+                document.getElementById('password').value = '';
+                checkAuth();
+            }
+        }
+
+        // --- NAVIGASI TAB ---
+        function showTab(tabId) {
+            if (tabId !== 'tab-scan') stopScanner();
+
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden-section'));
+            document.getElementById(tabId).classList.remove('hidden-section');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-800', 'text-white');
+                btn.classList.add('text-blue-200');
+            });
+
+            const activeBtn = document.getElementById('nav-' + tabId.replace('tab-', ''));
+            if (activeBtn) {
+                activeBtn.classList.add('bg-blue-800', 'text-white');
+                activeBtn.classList.remove('text-blue-200');
+            }
+
+            if (tabId === 'tab-rekap') renderRekapTable();
+        }
+
+        // --- 2. TAMBAH, EDIT & SIMPAN ANGGOTA JEMAAT ---
+        document.getElementById('jemaat-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const editIndex = parseInt(document.getElementById('edit-index').value);
+            const data = {
+                no_anggota: document.getElementById('no_anggota').value.trim(),
+                nama: document.getElementById('nama').value.trim(),
+                ttl: document.getElementById('ttl').value.trim(),
+                no_hp: document.getElementById('no_hp').value.trim(),
+                keterangan: document.getElementById('keterangan').value.trim() || '-',
+                alamat: document.getElementById('alamat').value.trim()
+            };
+
+            if (editIndex === -1 && jemaatList.some(j => j.no_anggota.toLowerCase() === data.no_anggota.toLowerCase())) {
+                alert('Nomor Anggota sudah terdaftar! Gunakan nomor lain.');
+                return;
+            }
+
+            if (editIndex === -1) {
+                jemaatList.push(data);
+            } else {
+                jemaatList[editIndex] = data;
+            }
+
+            localStorage.setItem('church_jemaat', JSON.stringify(jemaatList));
+            resetForm();
+            renderJemaatTable();
+            syncToGoogleSheets(false); // Otomatis backup ke Google Sheets
+            alert('Data jemaat berhasil disimpan & disinkronkan ke Google Sheets!');
+        });
+
+        function editJemaat(index) {
+            const j = jemaatList[index];
+            document.getElementById('edit-index').value = index;
+            document.getElementById('no_anggota').value = j.no_anggota;
+            document.getElementById('nama').value = j.nama;
+            document.getElementById('ttl').value = j.ttl;
+            document.getElementById('no_hp').value = j.no_hp;
+            document.getElementById('keterangan').value = j.keterangan;
+            document.getElementById('alamat').value = j.alamat;
+
+            document.getElementById('form-title').innerHTML = '<i class="fas fa-edit mr-2 text-amber-600"></i>Edit Data Anggota Jemaat';
+            document.getElementById('btn-save-jemaat').innerHTML = '<i class="fas fa-check mr-1"></i> Simpan Perubahan';
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteJemaat(index) {
+            if (confirm(`Hapus data jemaat "${jemaatList[index].nama}"?`)) {
+                jemaatList.splice(index, 1);
+                localStorage.setItem('church_jemaat', JSON.stringify(jemaatList));
+                renderJemaatTable();
+                syncToGoogleSheets(false); // Update Google Sheets
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('jemaat-form').reset();
+            document.getElementById('edit-index').value = -1;
+            document.getElementById('form-title').innerHTML = '<i class="fas fa-user-plus mr-2"></i>Tambah Anggota Jemaat Baru';
+            document.getElementById('btn-save-jemaat').innerHTML = '<i class="fas fa-save mr-1"></i> Simpan Data Jemaat';
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+        }
+
+        function renderJemaatTable() {
+            const tbody = document.getElementById('jemaat-tbody');
+            const keyword = document.getElementById('search-jemaat').value.toLowerCase();
+            tbody.innerHTML = '';
+
+            const filtered = jemaatList.filter(j => 
+                j.nama.toLowerCase().includes(keyword) || 
+                j.no_anggota.toLowerCase().includes(keyword)
+            );
+
+            document.getElementById('total-jemaat').innerText = filtered.length;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-400">Belum ada data jemaat.</td></tr>';
+                return;
+            }
+
+            filtered.forEach((j) => {
+                const realIndex = jemaatList.indexOf(j);
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-semibold text-blue-800">${j.no_anggota}</td>
+                        <td class="p-3 font-medium">${j.nama}</td>
+                        <td class="p-3">${j.ttl}</td>
+                        <td class="p-3">${j.no_hp}</td>
+                        <td class="p-3">${j.alamat}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">${j.keterangan}</span></td>
+                        <td class="p-3 text-center">
+                            <button onclick="openQRModal('${j.no_anggota}', '${j.nama}')" class="bg-slate-800 hover:bg-slate-900 text-white px-2.5 py-1 rounded text-xs">
+                                <i class="fas fa-qrcode mr-1"></i> Lihat QR
+                            </button>
+                        </td>
+                        <td class="p-3 text-center space-x-1">
+                            <button onclick="editJemaat(${realIndex})" class="text-amber-600 hover:text-amber-800 p-1" title="Edit"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteJemaat(${realIndex})" class="text-red-600 hover:text-red-800 p-1" title="Hapus"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // --- 3. QR CODE GENERATOR MODAL ---
+        function openQRModal(noAnggota, nama) {
+            currentQRName = `${noAnggota}_${nama}`;
+            document.getElementById('modal-jemaat-name').innerText = nama;
+            document.getElementById('modal-jemaat-no').innerText = `No. Anggota: ${noAnggota}`;
+            
+            const container = document.getElementById('qrcode-container');
+            container.innerHTML = '';
+            new QRCode(container, {
+                text: noAnggota,
+                width: 180,
+                height: 180,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('qr-modal').classList.remove('hidden');
+            document.getElementById('qr-modal').classList.add('flex');
+        }
+
+        function closeQRModal() {
+            document.getElementById('qr-modal').classList.add('hidden');
+            document.getElementById('qr-modal').classList.remove('flex');
+        }
+
+        function downloadQRImage() {
+            const img = document.querySelector('#qrcode-container img');
+            if (img) {
+                const link = document.createElement('a');
+                link.href = img.src;
+                link.download = `QR_${currentQRName}.png`;
+                link.click();
+            }
+        }
+
+        // --- 4. SCANNER KAMERA ABSENSI ---
+        function startScanner() {
+            if (html5QrCode) return;
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 220, height: 220 } },
+                (decodedText) => {
+                    processAttendance(decodedText.trim());
+                },
+                (errorMessage) => { /* ignore scan errors */ }
+            ).catch(err => {
+                alert("Gagal mengakses kamera. Pastikan izin kamera aktif atau gunakan HTTPS.");
+                html5QrCode = null;
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    html5QrCode = null;
+                }).catch(err => console.log(err));
+            }
+        }
+
+        function manualCheckIn() {
+            const code = document.getElementById('manual-no-anggota').value.trim();
+            if (code) {
+                processAttendance(code);
+                document.getElementById('manual-no-anggota').value = '';
+            }
+        }
+
+        let lastScannedCode = '';
+        let lastScanTime = 0;
+
+        function processAttendance(noAnggota) {
+            const now = Date.now();
+            if (noAnggota === lastScannedCode && (now - lastScanTime) < 3000) return;
+            lastScannedCode = noAnggota;
+            lastScanTime = now;
+
+            const member = jemaatList.find(j => j.no_anggota.toLowerCase() === noAnggota.toLowerCase());
+            const alertBox = document.getElementById('scan-alert');
+            alertBox.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800', 'bg-amber-100', 'text-amber-800');
+
+            if (!member) {
+                alertBox.classList.add('bg-red-100', 'text-red-800');
+                alertBox.innerHTML = `<i class="fas fa-times-circle mr-1"></i> QR Tidak Dikenal: <b>${noAnggota}</b> tidak terdaftar!`;
+                return;
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+            const jam = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const ibadah = document.getElementById('jenis-ibadah').value;
+
+            const alreadyPresent = absensiList.some(a => 
+                a.no_anggota === member.no_anggota && a.tanggal === today && a.ibadah === ibadah
+            );
+
+            if (alreadyPresent) {
+                alertBox.classList.add('bg-amber-100', 'text-amber-800');
+                alertBox.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i> <b>${member.nama}</b> sudah tercatat hadir di ${ibadah} hari ini.`;
+                return;
+            }
+
+            absensiList.unshift({
+                tanggal: today,
+                jam: jam,
+                ibadah: ibadah,
+                no_anggota: member.no_anggota,
+                nama: member.nama
+            });
+
+            localStorage.setItem('church_absensi', JSON.stringify(absensiList));
+            syncToGoogleSheets(false); // Otomatis backup absensi ke Google Sheets
+            alertBox.classList.add('bg-green-100', 'text-green-800');
+            alertBox.innerHTML = `<i class="fas fa-check-circle mr-1"></i> Berhasil! <b>${member.nama}</b> (${member.no_anggota}) hadir.`;
+            renderRecentAbsensi();
+        }
+
+        function renderRecentAbsensi() {
+            const list = document.getElementById('recent-absensi-list');
+            list.innerHTML = '';
+            const latest = absensiList.slice(0, 15);
+            if (latest.length === 0) {
+                list.innerHTML = '<li class="py-4 text-center text-slate-400">Belum ada absensi tercatat.</li>';
+                return;
+            }
+            latest.forEach(item => {
+                list.innerHTML += `
+                    <li class="py-2.5 flex justify-between items-center">
+                        <div>
+                            <p class="font-semibold text-slate-800">${item.nama} <span class="text-xs text-blue-700">(${item.no_anggota})</span></p>
+                            <p class="text-xs text-slate-500">${item.ibadah}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-medium bg-green-50 text-green-700 px-2 py-0.5 rounded">${item.jam}</span>
+                            <p class="text-[11px] text-slate-400">${item.tanggal}</p>
+                        </div>
+                    </li>
+                `;
+            });
+        }
+
+        // --- 5. REKAP & EXPORT (EXCEL, PDF, WORD) ---
+        function getFilteredAbsensi() {
+            const fIbadah = document.getElementById('filter-ibadah').value;
+            const fTanggal = document.getElementById('filter-tanggal').value;
+
+            return absensiList.filter(a => {
+                const matchIbadah = (fIbadah === 'ALL' || a.ibadah === fIbadah);
+                const matchTanggal = (!fTanggal || a.tanggal === fTanggal);
+                return matchIbadah && matchTanggal;
+            });
+        }
+
+        function renderRekapTable() {
+            const tbody = document.getElementById('rekap-tbody');
+            const data = getFilteredAbsensi();
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Tidak ada data absensi sesuai filter.</td></tr>';
+                return;
+            }
+
+            data.forEach(a => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3">${a.tanggal}</td>
+                        <td class="p-3">${a.jam}</td>
+                        <td class="p-3">${a.ibadah}</td>
+                        <td class="p-3 font-semibold text-blue-800">${a.no_anggota}</td>
+                        <td class="p-3">${a.nama}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function resetFilterAbsensi() {
+            document.getElementById('filter-ibadah').value = 'ALL';
+            document.getElementById('filter-tanggal').value = '';
+            renderRekapTable();
+        }
+
+        function exportData(type, format) {
+            let headers = [];
+            let rows = [];
+            let title = '';
+            let fileName = '';
+
+            if (type === 'jemaat') {
+                title = `DATA ANGGOTA JEMAAT - ${appSettings.churchName}`;
+                fileName = `Data_Jemaat_${new Date().toISOString().slice(0,10)}`;
+                headers = ['No. Anggota', 'Nama Lengkap', 'Tempat/Tgl Lahir', 'No. HP', 'Alamat', 'Keterangan'];
+                rows = jemaatList.map(j => [j.no_anggota, j.nama, j.ttl, j.no_hp, j.alamat, j.keterangan]);
+            } else {
+                title = `REKAP ABSENSI IBADAH - ${appSettings.churchName}`;
+                fileName = `Rekap_Absensi_${new Date().toISOString().slice(0,10)}`;
+                headers = ['Tanggal', 'Jam Hadir', 'Jenis Ibadah', 'No. Anggota', 'Nama Jemaat'];
+                rows = getFilteredAbsensi().map(a => [a.tanggal, a.jam, a.ibadah, a.no_anggota, a.nama]);
+            }
+
+            if (rows.length === 0) {
+                alert('Tidak ada data untuk diunduh!');
+                return;
+            }
+
+            // A. EXPORT EXCEL (.xlsx)
+            if (format === 'excel') {
+                const wsData = [headers, ...rows];
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                XLSX.utils.book_append_sheet(wb, ws, "Laporan");
+                XLSX.writeFile(wb, `${fileName}.xlsx`);
+            }
+
+            // B. EXPORT PDF (.pdf)
+            else if (format === 'pdf') {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.setFontSize(14);
+                doc.text(title, 14, 16);
+                doc.setFontSize(10);
+                doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 14, 22);
+                
+                doc.autoTable({
+                    head: [headers],
+                    body: rows,
+                    startY: 28,
+                    styles: { fontSize: 8 }
+                });
+                doc.save(`${fileName}.pdf`);
+            }
+
+            // C. EXPORT WORD (.doc)
+            else if (format === 'word') {
+                let tableHTML = `<table border="1" style="border-collapse:collapse; width:100%; font-family:Arial, sans-serif; font-size:12px;">
+                    <thead><tr style="background-color:#e2e8f0;">${headers.map(h => `<th style="padding:6px;">${h}</th>`).join('')}</tr></thead>
+                    <tbody>${rows.map(r => `<tr>${r.map(c => `<td style="padding:6px;">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+                </table>`;
+
+                const docContent = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                    <head><meta charset='utf-8'><title>${title}</title></head>
+                    <body>
+                        <h2 style="font-family:Arial, sans-serif;">${title}</h2>
+                        <p style="font-family:Arial, sans-serif; font-size:11px;">Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+                        ${tableHTML}
+                    </body></html>
+                `;
+
+                const blob = new Blob(['\ufeff', docContent], { type: 'application/msword' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${fileName}.doc`;
+                link.click();
+            }
+        }
+
+        // --- 6. PENGATURAN APLIKASI ---
+        let tempLogoBase64 = null;
+
+        function previewLogoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                tempLogoBase64 = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function saveChurchSettings() {
+            const newName = document.getElementById('set-church-name').value.trim();
+            if (newName) appSettings.churchName = newName;
+            if (tempLogoBase64) appSettings.logoUrl = tempLogoBase64;
+
+            localStorage.setItem('church_settings', JSON.stringify(appSettings));
+            applySettings();
+            syncToGoogleSheets(false);
+            alert('Identitas & Logo Gereja berhasil diperbarui!');
+        }
+
+        function saveAccountSettings() {
+            const newUser = document.getElementById('set-username').value.trim();
+            const newPass = document.getElementById('set-password').value.trim();
+
+            if (!newUser || !newPass) {
+                alert('Username dan Password baru tidak boleh kosong!');
+                return;
+            }
+            appSettings.username = newUser;
+            appSettings.password = newPass;
+            localStorage.setItem('church_settings', JSON.stringify(appSettings));
+            document.getElementById('set-password').value = '';
+            syncToGoogleSheets(false);
+            alert('Akun login berhasil diperbarui dan disinkronkan ke Google Sheets!');
+        }
+
+        function backupDatabase() {
+            const backupObj = {
+                settings: appSettings,
+                jemaat: jemaatList,
+                absensi: absensiList
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj));
+            const link = document.createElement('a');
+            link.href = dataStr;
+            link.download = `Backup_Data_Gereja_${new Date().toISOString().slice(0,10)}.json`;
+            link.click();
+        }
+
+        function restoreDatabase(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.jemaat && data.absensi) {
+                        jemaatList = data.jemaat;
+                        absensiList = data.absensi;
+                        if (data.settings) appSettings = data.settings;
+
+                        localStorage.setItem('church_jemaat', JSON.stringify(jemaatList));
+                        localStorage.setItem('church_absensi', JSON.stringify(absensiList));
+                        localStorage.setItem('church_settings', JSON.stringify(appSettings));
+
+                        applySettings();
+                        renderJemaatTable();
+                        renderRekapTable();
+                        syncToGoogleSheets(false);
+                        alert('Data berhasil dipulihkan & disinkronkan ke Google Sheets!');
+                    } else {
+                        alert('Format file backup tidak valid.');
+                    }
+                } catch (err) {
+                    alert('Gagal membaca file JSON.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetAllData() {
+            if (confirm('PERINGATAN: Semua data jemaat dan absensi akan dihapus permanen (termasuk di Google Sheets). Lanjutkan?')) {
+                localStorage.removeItem('church_jemaat');
+                localStorage.removeItem('church_absensi');
+                jemaatList = [];
+                absensiList = [];
+                renderJemaatTable();
+                renderRekapTable();
+                syncToGoogleSheets(false);
+                alert('Semua data berhasil dikosongkan.');
+            }
+        }
+
+        // Jalankan saat startup (juga tarik pengaturan akun terbaru sebelum login jika ada)
+        applySettings();
+        syncFromGoogleSheets(false);
+        checkAuth();
+    </script>
+</body>
+</html>
